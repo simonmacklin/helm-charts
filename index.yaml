@@ -3,6 +3,16 @@ entries:
   example:
   - apiVersion: v2
     appVersion: 1.16.0
+    created: "2021-01-01T15:39:21.08719096Z"
+    description: A Helm chart for Kubernetes
+    digest: d7ba6d026a6adaa9d48f6194bf477e5fb51dbc8554f3944b58bb1182462851e3
+    name: example
+    type: application
+    urls:
+    - https://github.com/simonmacklin/helm-charts/releases/download/example-0.1.2/example-0.1.2.tgz
+    version: 0.1.2
+  - apiVersion: v2
+    appVersion: 1.16.0
     created: "2021-01-01T15:38:04.993228045Z"
     description: A Helm chart for Kubernetes
     digest: 3711dda9bcdf5b22525416d0e523d5a04d67057d198e1bbe6e2315ad22a1868f
