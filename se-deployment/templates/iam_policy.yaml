@@ -1,0 +1,36 @@
+{{- if .Values.iam.create }}
+---
+apiVersion: iam.aws.crossplane.io/v1beta1
+kind: Policy
+metadata:
+  name: {{ include "se-deployment.name" . }}
+  labels:
+    {{- include "se-deployment.labels" . | nindent 4 }}
+spec:
+    forProvider:
+        name: {{ .Values.stack }}-{{ include "se-deployment.iamResourceName" . }}
+        document: |
+          {
+            "Version": "2012-10-17",
+            "Statement": [
+              {{- $lastSta := sub (len .Values.iam.statements) 1 }}
+              {{- range $index, $statement := .Values.iam.statements }}
+              {
+                "Effect": {{ $statement.effect | quote }},
+                "Action": [
+                  {{- $lastAct := sub (len $statement.actions) 1 }}
+                  {{- range $actionIndex, $action := $statement.actions }}
+                    {{ $action | quote }}{{ if ne $lastAct $actionIndex }},{{ end }}
+                  {{- end }}
+                ],
+                "Resource": [
+                  {{- $lastRes := sub (len $statement.resources) 1 }}
+                  {{- range $resourceIndex, $resource := $statement.resources }}
+                    {{ $resource | quote }}{{ if ne $lastRes $resourceIndex }},{{ end }}
+                  {{- end }}
+                ]
+              }{{ if ne $lastSta $index }},{{ end }}
+              {{- end }}
+            ]
+          }
+{{- end }}

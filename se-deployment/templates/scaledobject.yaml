@@ -1,0 +1,25 @@
+{{- if .Values.keda.enabled }}
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ include "se-deployment.name" . }}
+  labels:
+    {{- include "se-deployment.labels" . | nindent 4 }}
+spec:
+  pollingInterval: {{ .Values.keda.pollingInterval }}
+  cooldownPeriod: {{ .Values.keda.cooldownPeriod }}
+  idleReplicaCount: {{ .Values.keda.idleReplicaCount }}
+  minReplicaCount: {{ .Values.keda.minReplicaCount }}
+  maxReplicaCount: {{ .Values.keda.maxReplicaCount }}
+  {{- with .Values.keda.fallback }}
+  fallback:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  scaleTargetRef:
+    name: {{ include "se-deployment.name" . }}
+  {{- with .Values.keda.triggers }}
+  triggers:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}

@@ -1,0 +1,15 @@
+apiVersion: v2
+name: se-deployment
+description: Generic Helm Chart for Steeleye deployments
+home: https://github.com/steeleye/helm-charts/tree/master/se-deployment
+keywords:
+- steeleye
+- se-deployment
+maintainers:
+- email: andre.nogueira@steel-eye.com
+  name: André Nogueira
+- email: rajesh.bettaswamy@steel-eye.com
+  name: Rajesh Bettaswamy
+type: application
+version: 0.1.14
+appVersion: ""

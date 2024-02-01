@@ -1,0 +1,30 @@
+{{- if .Values.iam.create }}
+---
+apiVersion: iam.aws.crossplane.io/v1beta1
+kind: Role
+metadata:
+  name: {{ include "se-deployment.name" . }}
+  labels:
+    {{- include "se-deployment.labels" . | nindent 4 }}
+spec:
+  forProvider:
+      description: "IAM role created by Crossplane using {{ .Chart.Name }} for {{ include "se-deployment.name" . }} in {{ .Values.stack }}"
+      assumeRolePolicyDocument: |
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+              {
+                  "Effect": "Allow",
+                  "Principal": {
+                      "Federated": {{ printf "arn:aws:iam::%s:oidc-provider/oidc.eks.%s.amazonaws.com/id/%s" .Values.iam.accountId .Values.iam.region .Values.iam.eksClusterId }}
+                  },
+                  "Action": "sts:AssumeRoleWithWebIdentity",
+                  "Condition": {
+                      "StringLike": {
+                          {{ printf "oidc.eks.%s.amazonaws.com/id/%s:sub" .Values.iam.region .Values.iam.eksClusterId }}: {{ printf "system:serviceaccount:%s:" .Release.Namespace }}{{ include "se-deployment.serviceAccountName" . }}
+                      }
+                  }
+              }
+          ]
+        }
+{{- end }}

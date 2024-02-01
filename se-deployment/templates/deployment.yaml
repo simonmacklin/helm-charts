@@ -1,0 +1,156 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "se-deployment.name" . }}
+  labels:
+    {{- include "se-deployment.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "se-deployment.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/proxyCPU: {{ .Values.istio.sidecar.cpu | quote }}
+        sidecar.istio.io/proxyMemory: {{ .Values.istio.sidecar.memory | quote }}
+        sidecar.istio.io/proxyMemoryLimit: {{ .Values.istio.sidecar.memory | quote }}
+        {{- with .Values.podAnnotations }}
+          {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        sidecar.istio.io/inject: {{ .Values.istio.enable | quote }}
+        {{- include "se-deployment.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "se-deployment.serviceAccountName" . }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if .Values.initContainer.enabled }}
+      initContainers:
+        - name: "{{ .Release.Name }}-init"
+          {{- with .Values.initContainer.args }}
+          args:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.initContainer.command }}
+          command:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          env:
+          {{- include "se-deployment.env" .Values.initContainer | nindent 12 }}
+          {{- include "se-deployment.envFromSecret" .Values.initContainer | nindent 12 }}
+          {{- include "se-deployment.envFromConfigMap" .Values.initContainer | nindent 12 }}
+          envFrom:
+          {{- include "se-deployment.envFromSecretRef" .Values.initContainer | nindent 12 }}
+          {{- include "se-deployment.envFromConfigMapRef" .Values.initContainer | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.initContainer.securityContext | nindent 12 }}
+          image: "{{ .Values.initContainer.image.repository }}:{{ .Values.initContainer.image.tag }}"
+          imagePullPolicy: {{ .Values.initContainer.image.pullPolicy }}
+          resources:
+            {{- toYaml .Values.initContainer.resources | nindent 12 }}
+      {{- end }}
+      containers:
+        - name: {{ .Release.Name }}
+          {{- with .Values.args }}
+          args:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.command }}
+          command:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          env:
+          {{- include "se-deployment.env" .Values | nindent 12 }}
+          {{- include "se-deployment.envFromSecret" .Values | nindent 12 }}
+          {{- include "se-deployment.envFromConfigMap" .Values | nindent 12 }}
+          envFrom:
+          {{- include "se-deployment.envFromSecretRef" .Values | nindent 12 }}
+          {{- include "se-deployment.envFromConfigMapRef" .Values | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- if .Values.mountVolume.enabled }}
+          volumeMounts:
+            {{- range .Values.volumeMounts }}
+            - name: {{ .name }}
+              mountPath: {{ .mountPath }}
+            {{- end }}
+          {{- end }}
+          {{- if .Values.service.enabled }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.port }}
+              protocol: TCP
+            {{- if .Values.service.metricsPort.enabled }}
+            - name: metrics
+              containerPort: {{ .Values.service.metricsPort.port }}
+              protocol: TCP
+            {{- end }}
+          {{- end }}
+          {{- if .Values.readinessProbe.enabled }}
+          readinessProbe:
+            {{- if .Values.readinessProbe.path }}
+            httpGet:
+              path: {{ .Values.readinessProbe.path | quote }}
+              port: http
+              scheme: HTTP
+            {{- else }}
+            tcpSocket:
+              port: http
+            {{- end }}
+            failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
+            initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+            successThreshold: {{ .Values.readinessProbe.successThreshold }}
+            timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+          {{- end }}
+          {{- if .Values.livenessProbe.enabled }}
+          livenessProbe:
+            {{- if .Values.livenessProbe.path }}
+            httpGet:
+              path: {{ .Values.livenessProbe.path | quote }}
+              port: http
+              scheme: HTTP
+            {{- else }}
+            tcpSocket:
+              port: http
+            {{- end }}
+            failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
+            initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+            successThreshold: {{ .Values.livenessProbe.successThreshold }}
+            timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.mountVolume.enabled }}
+      volumes:
+      {{- range .Values.volumes }}
+      - name: {{ .name }}
+        {{ .type }}:
+          server: {{ .server }}
+          path: {{ .path }}
+      {{- end }}
+      {{- end }}

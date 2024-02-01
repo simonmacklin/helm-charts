@@ -1,0 +1,14 @@
+{{- if .Values.iam.create }}
+---
+apiVersion: iam.aws.crossplane.io/v1beta1
+kind: RolePolicyAttachment
+metadata:
+  name: {{ include "se-deployment.name" . }}
+  labels:
+    {{- include "se-deployment.labels" . | nindent 4 }}
+spec:
+  forProvider:
+    roleNameRef:
+      name: {{ .Values.stack }}-{{ include "se-deployment.iamResourceName" . }}
+    policyArn: {{ printf "arn:aws:iam::%s:policy/" .Values.iam.accountId }}{{ .Values.stack }}-{{ include "se-deployment.iamResourceName" . }}
+{{- end }}
